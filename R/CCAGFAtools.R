@@ -44,15 +44,15 @@ GFAtrim <- function(model,threshold=1e-3) {
   active <- matrix(1,M,model$K) 
   for(m in 1:M) {
     # The relative contribution to describing the total data
-    # variation is 1/alpha[m,k] / (datavar[m] - /tau[m])
-    residual <- model$datavar[m] - 1/model$tau[m]
+    # variation is D[m]/alpha[m,k] / (datavar[m] - D[m]/tau[m])
+    residual <- model$datavar[m] - model$D[m]/model$tau[m]
     if(residual < 1e-2*model$datavar[m]) {  # Noise models almost everything
       print(paste("Warning, trimming a model for which the noise explains already",
             format(model$D[m]/model$tau[m]/model$datavar[m],digits=4),"percent of the total variation in data set",m,". Might result for zero components for that data set."))
       residual <- 1e-2*model$datavar[m]
     }
 
-    active[m,which(1/model$alpha[m,]<threshold*residual)] <- 0
+    active[m,which(model$D[m]/model$alpha[m,]<threshold*residual)] <- 0
   }
 
   keep <- which(colSums(active)>0)

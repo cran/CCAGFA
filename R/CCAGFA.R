@@ -117,7 +117,7 @@ GFA <- function(Y,K,opts) {
   N <- nrow(Y[[1]])           # The number of samples
   datavar <- vector()                 # The total variance of the data, needed
   for(m in 1:M) {                     #     for scaling in the initialization
-    datavar[m]=mean(apply(Y[[m]],2,var)) #     and for GFAtrim()
+    datavar[m]=sum(apply(Y[[m]],2,var)) #     and for GFAtrim()
   }
   
   # Some constants for speeding up the computation
