@@ -1,0 +1,31 @@
+citEntry(entry="Article",
+	author=personList(as.person("Arto Klami"),
+		as.person("Seppo Virtanen"), as.person("Samuel Kaski")),
+  title="Bayesian Canonical Correlation Analysis",
+  journal="Journal of Machine Learning Research",
+  volume="14",
+  pages="899--937",
+  year="2013",
+  url="http://research.ics.aalto.fi/mi/online-papers/klami13a.pdf",
+	header="To cite CCA in publications use:",
+	textVersion=paste("Arto Klami, Seppo Virtanen and Samuel Kaski.",
+		"Bayesian Canonical Correlation Analysis.",
+		"Journal of Machine Learning Research, 14:899-937,2013.",
+		"http://research.ics.aalto.fi/mi/online-papers/klami13a.pdf")
+)
+
+citEntry(entry="InProceedings",
+	author=personList(as.person("Seppo Virtanen"),
+		as.person("Arto Klami"),as.person("Suleiman A. Khan"),as.person("Samuel Kaski")),
+  title="Bayesian Group Factor Analysis",
+  booktitle="Proceedings of the Fifteenth International Conference on Artificial Intelligence and Statistics (AISTATS)",
+  volume="22",
+  pages="1269--1277",
+  year="2012",
+  url="http://research.ics.aalto.fi/mi/online-papers/virtanen12.pdf",
+	header="To cite GFA in publications use:",
+	textVersion=paste("Seppo Virtanen, Arto Klami, Suleiman A. Khan and Samuel Kaski.",
+		"Bayesian Group Factor Analysis.",
+		"Proceedings of the Fifteenth International Conference on Artificial Intelligence and Statistics (AISTATS), volume 22 of JMLR W&CP, pages 1269-1277, 2012.",
+		"http://research.ics.aalto.fi/mi/online-papers/virtanen12.pdf")
+)

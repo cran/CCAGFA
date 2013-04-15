@@ -2,8 +2,8 @@ Package: CCAGFA
 Type: Package
 Title: Bayesian canonical correlation analysis and group factor
         analysis
-Version: 1.0.1
-Date: 2013-04-11
+Version: 1.0.2
+Date: 2013-04-15
 Author: Seppo Virtanen and Arto Klami
 Maintainer: Seppo Virtanen <seppo.j.virtanen@aalto.fi>
 Description: Variational Bayesian algorithm for learning canonical
@@ -11,7 +11,7 @@ Description: Variational Bayesian algorithm for learning canonical
         (IBFA), and group factor analysis (GFA)
 License: GPL (>= 2)
 URL: http://research.ics.aalto.fi/mi/
-Packaged: 2013-04-11 12:49:21 UTC; sjvirtan
+Packaged: 2013-04-15 09:31:00 UTC; sjvirtan
 NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2013-04-11 15:22:55
+Date/Publication: 2013-04-15 14:21:36
