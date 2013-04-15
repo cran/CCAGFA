@@ -16,14 +16,16 @@ factorizations that describe variation shared by all possible subsets of sources
 by Virtanen et al. (2012).
 
 We recommend that scientific publications using the code for CCA or BIBFA cite Klami et al. (2013),
-and publications using the code for GFA cite Virtanen et al. (2012).}
+and publications using the code for GFA cite Virtanen et al. (2012).
+
+The package is based on the research done in the SMLB group, Helsinki Institute for Information Technology HIIT, Department of Information and Computer Science, Aalto University, http://research.ics.aalto.fi/mi/.}
 \details{
   \tabular{ll}{
     Package: \tab CCAGFA\cr
     Type: \tab Package\cr
-    Version: \tab 1.0.0\cr
-    Date: \tab 2013-03-15\cr
-    License: \tab FreeBSD\cr
+    Version: \tab 1.0.2\cr
+    Date: \tab 2013-04-15\cr
+    License: \tab GPL (>= 2)\cr
   }
 }
 \author{Seppo Virtanen and Arto Klami.
@@ -38,7 +40,7 @@ group factor analysis. In \emph{Proceedings of the 15th International
   Conference on Artificial Intelligence and Statistics (AISTATS)}, volume 22 of JMLR W&CP, pages 1269-1277, 2012.
 
 Klami, A. and Virtanen, S., and Kaski, S.:Bayesian Canonical Correlation
-Analysis. \emph{Journal of Machine Learning Research}, 2013.}
+Analysis. \emph{Journal of Machine Learning Research},14:899-937, 2013.}
 \keyword{package}
 %\seealso{%%~~ \code{\link[somepkg:somepkg-package]{somepkg}} ~~}}
 \examples{# Load the package
