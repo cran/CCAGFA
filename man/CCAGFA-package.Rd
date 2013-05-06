@@ -23,8 +23,8 @@ The package is based on the research done in the SMLB group, Helsinki Institute 
   \tabular{ll}{
     Package: \tab CCAGFA\cr
     Type: \tab Package\cr
-    Version: \tab 1.0.2\cr
-    Date: \tab 2013-04-15\cr
+    Version: \tab 1.0.3\cr
+    Date: \tab 2013-05-06\cr
     License: \tab GPL (>= 2)\cr
   }
 }
@@ -40,7 +40,7 @@ group factor analysis. In \emph{Proceedings of the 15th International
   Conference on Artificial Intelligence and Statistics (AISTATS)}, volume 22 of JMLR W&CP, pages 1269-1277, 2012.
 
 Klami, A. and Virtanen, S., and Kaski, S.:Bayesian Canonical Correlation
-Analysis. \emph{Journal of Machine Learning Research},14:899-937, 2013.}
+Analysis. \emph{Journal of Machine Learning Research},14:965-1003, 2013.}
 \keyword{package}
 %\seealso{%%~~ \code{\link[somepkg:somepkg-package]{somepkg}} ~~}}
 \examples{# Load the package
