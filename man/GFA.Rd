@@ -14,7 +14,7 @@ Estimate a Bayesian IBFA/CCA/GFA model
   analysis (BIBFA).
 
   GFA is a latent variable model for explaining relationships between
-  multiple co-occurring data matrices. The model finds linear factors
+  multiple data matrices with co-occurring samples. The model finds linear factors
   that explain dependencies between these matrices, similarly to how
   factor analysis explains dependencies between individual variables.
   
@@ -61,7 +61,7 @@ matrices, and these functions are provided for convenience only.
 \value{
 The methods return a list that contains all the model parameters
 and other details.
-\item{Z}{The mean of the latent variables, N times K matrix}
+\item{Z}{The mean of the latent variables; N times K matrix}
 \item{covZ}{The covariance of the latent variables; K times K matrix}
 \item{ZZ}{The second moments Z^TZ; K times K matrix}
 \item{W}{List of the mean projections; D_i times K matrices}
@@ -71,7 +71,13 @@ and other details.
 \item{alpha}{The mean precisions of the projection weights, used in the ARD prior; M times K matrix}
 \item{cost}{Vector collecting the variational lower bounds for each iteration}
 \item{D}{Data dimensionalities; M-element vector}
+\item{K}{The number of latent factors}
 \item{datavar}{The total variance in the data sets, needed for \code{\link{GFAtrim}}}
+\item{R}{The rank of alpha}
+\item{U}{The group factor loadings; M times R matrix}
+\item{V}{The latent group factors; K times R matrix}
+\item{u.mu}{The mean of group factor loadings U; M-element vector}
+\item{v.mu}{The mean of latent group factors V; K-element vector}
 }
 \references{
 Virtanen, S. and Klami, A., and Kaski, S.: Bayesian CCA via group-wise
@@ -84,9 +90,11 @@ group factor analysis. In \emph{Proceedings of the 15th International
 
 Klami, A. and Virtanen, S., and Kaski, S.:Bayesian Canonical Correlation
 Analysis. \emph{Journal of Machine Learning Research}, 2013.
+
+Klami, A. and Virtanen, S., Leppaaho, E., and Kaski, S.:Group Factor Analysis. \emph{Submitted to a journal}, 2014.
 }
 \author{
-Seppo Virtanen and Arto Klami
+Seppo Virtanen, Eemeli Leppaaho and Arto Klami
 }
 \seealso{
 \code{\link{getDefaultOpts}}

@@ -1,3 +1,9 @@
+Changes in CCAGFA version 1.0.4
+
+  o Advanced hierarhical low-rank ARD prior
+  o Options to prune empty factors during training and reduce memory
+  o Improved efficiency
+
 Changes in CCAGFA version 1.0.3
 
   o Corrected citation page numbers

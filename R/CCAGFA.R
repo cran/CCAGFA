@@ -15,7 +15,7 @@ GFAexperiment <- function(Y,K,opts,Nrep=10) {
   if(Nrep==1) {
     return(GFA(Y,K,opts))
   }
-
+  
   lb <- vector() # Lower bounds
   models <- vector("list")
   for(rep in 1:Nrep){
@@ -23,16 +23,17 @@ GFAexperiment <- function(Y,K,opts,Nrep=10) {
     models[[rep]] <- model
     lb[rep] <- tail(model$cost,1)
     if(opts$verbose==1) {
-      print(paste("Run ",rep,"/",Nrep,": ",length(model$cost)," iterations with final cost ",lb[rep],sep=""))
+      print(paste("Run ",rep,"/",Nrep,": ",length(model$cost)," iterations",
+                  " with final cost ",lb[rep],sep=""))
     }
-  }
-
+    }
+  
   k <- which.max(lb)
   model <- models[[k]]
-
-  return(model)
-}
   
+  return(model)
+  }
+
 CCAexperiment <- function(Y,K,opts,Nrep=10) {
   #
   # A wrapper for running the CCA/BIBFA model Nrep times
@@ -42,9 +43,12 @@ CCAexperiment <- function(Y,K,opts,Nrep=10) {
   #
   # See CCA() for description of the inputs.
   #
-
+  
   if(length(Y)!=2) {
-    print("Canonical correlation analysis (CCA) and Bayesian inter-battery factor analysis (BIBFA) can only be computed for two co-occurring data matrices. For multiple co-occurring data sources, use GFA() and GFAexperiment() instead.")
+    print("Canonical correlation analysis (CCA) and Bayesian inter-battery
+          factor analysis (BIBFA) can only be computed for two co-occurring
+          data matrices. For multiple co-occurring data sources, use GFA()
+          and GFAexperiment() instead.")
   } else {
     return(GFAexperiment(Y,K,opts,Nrep))
   }
@@ -56,7 +60,10 @@ CCA <- function(Y,K,opts) {
   # Calls the same function that is used for GFA.
   #
   if(length(Y)!=2) {
-    print("Canonical correlation analysis (CCA) and Bayesian inter-battery factor analysis (BIBFA) can only be computed for two co-occurring data matrices. For multiple co-occurring data sources, use GFA() and GFAexperiment() instead.")
+    print("Canonical correlation analysis (CCA) and Bayesian inter-battery
+          factor analysis (BIBFA) can only be computed for two co-occurring
+          data matrices. For multiple co-occurring data sources, use GFA()
+          and GFAexperiment() instead.")
   } else {
     return(GFA(Y,K,opts))
   }
@@ -95,6 +102,8 @@ GFA <- function(Y,K,opts) {
   #   alpha: The mean precisions of the projection weights, the
   #          variances of the ARD prior; M times K matrix
   #
+  #   U,V,u.mu,v.mu: The low-rank factorization of alpha.
+  #
   #   cost : Vector collecting the variational lower bounds for each
   #          iteration
   #   D    : Data dimensionalities; M-element vector
@@ -102,10 +111,14 @@ GFA <- function(Y,K,opts) {
   #               GFAtrim()
   #   addednoise: The level of extra noise as in opts$addednoise
   #
-
+  
   # Check that data is centered
-  if(!all(unlist(lapply(Y,colMeans)) < 1e-7) & opts$verbose == 2){
+  if(!all(unlist(lapply(Y,colMeans)) < 1e-7) & opts$verbose == 2) {
     print("Warning: The data does not have zero mean.")
+  }
+  # Check the number of views
+  if(length(Y)==1 & opts$verbose == 2){
+    print("Warning: The number of data sets must be larger than 1.")
   }
 
   #
@@ -116,8 +129,19 @@ GFA <- function(Y,K,opts) {
   Ds <- sum(D)                # Total number of features
   N <- nrow(Y[[1]])           # The number of samples
   datavar <- vector()                 # The total variance of the data, needed
-  for(m in 1:M) {                     #     for scaling in the initialization
+  for(m in 1:M)                       #     for scaling in the initialization
     datavar[m]=sum(apply(Y[[m]],2,var)) #     and for GFAtrim()
+
+  R <- opts$R                 # Model rank R: either "full" or an integer from 0 to min(M,K)
+  if(R >= min(c(M,K)) && is.double(R)) {  # if R >= min(M,K) convert to full
+    if(opts$verbose==2)
+      print("The rank corresponds to full rank solution.")
+    R <- "full"
+  }
+  if(R != "full") {
+    if(opts$verbose==2)
+      print("NOTE: Optimization of the rotation is not supported for low rank model.")
+    opts$rotate <- FALSE
   }
   
   # Some constants for speeding up the computation
@@ -138,16 +162,22 @@ GFA <- function(Y,K,opts) {
   Z <- matrix(rnorm(N*K,0,1),N,K) # The mean 
   covZ <- diag(1,K)               # The covariance
   ZZ <- covZ + covZ*N             # The second moments
-
+  
   # ARD and noise parameters
   alpha <- matrix(1,M,K)          # The mean of the ARD precisions
   logalpha <- matrix(1,M,K)       # The mean of <\log alpha >
-  b_ard <- matrix(1,M,K)          # The parameters of the Gamma distribution
-  a_ard <- alpha_0 + D/2          #     for ARD precisions
+  if(R=="full") {
+    b_ard <- matrix(1,M,K)        # The parameters of the Gamma distribution
+    a_ard <- alpha_0 + D/2        #     for ARD precisions
+    digammaa_ard <- digamma(a_ard)  # Constant for the lower bound
+  }
   tau <- rep(opts$init.tau,M)     # The mean noise precisions
   a_tau <- alpha_0t + N*D/2       # The parameters of the Gamma distribution
   b_tau <- rep(0,M)               #     for the noise precisions
-
+  digammaa_tau <- digamma(a_tau)  # Constants needed for computing the lower bound
+  lgammaa_tau <- -sum(lgamma(a_tau))
+  lb.pt.const <- -M*lgamma(alpha_0t) + M*alpha_0t*log(beta_0t)
+  
   # Alpha needs to be initialized to match the data scale
   for(m in 1:M) {
     alpha[m,] <- K*D[m]/(datavar[m]-1/tau[m])
@@ -157,88 +187,160 @@ GFA <- function(Y,K,opts) {
   # No need to initialize the projections randomly, since their updating
   # step is the first one; just define the variables here
   W <- vector("list",length=M)    # The means
-  covW <- vector("list",length=M) # The covariances
+  if(!opts$low.mem)
+    covW <- vector("list",length=M) # The covariances
+  else
+    covW <- diag(1,K)
+  
   WW <- vector("list",length=M)   # The second moments
   for(m in 1:M) {
     W[[m]] <- matrix(0,D[m],K)
-    covW[[m]] <- diag(1,K)
-    WW[[m]] <- crossprod(W[[m]]) + covW[[m]]*D[m]
+    if(!opts$low.mem){
+      covW[[m]] <- diag(1,K)
+      WW[[m]] <- crossprod(W[[m]]) + covW[[m]]*D[m]
+    } else {
+      WW[[m]] <- crossprod(W[[m]]) + covW*D[m]
+    }
+  }
+  
+  # Rotation parameters (full-rank only)
+  if(opts$rotate) {
+    Rot <- diag(K)      # The rotation matrix
+    RotInv <- diag(K)   # Its inverse
+    r <- as.vector(Rot) # Vectorized version of R
+    
+    # parameter list for the optimization function (see ?optim)
+    par <- list(K=K,D=D,Ds=Ds,N=N,WW=WW,ZZ=ZZ,M=M)
   }
 
-  # Rotation parameters
-  R <- diag(K)      # The rotation matrix
-  Rinv <- diag(K)   # Its inverse
-  r <- as.vector(R) # Vectorized version of R
-
-  # parameter list for the optimization function (see ?optim)
-  par <- list(K=K,D=D,Ds=Ds,N=N,WW=WW,ZZ=ZZ,M=M)
-
+  # Use R-rank factorization of alpha.
+  if(R!="full") {
+    U <- matrix(abs(rnorm(M*R)),M,R)
+    lu <- length(U)
+    u.mu <- rep(0,M)
+    V <- matrix(abs((rnorm(K*R))),K,R)
+    lv <- length(V)
+    v.mu <- rep(0,K)
+    
+    lambda <- opts$lambda
+    
+    x <- c(as.vector(U),as.vector(V),u.mu,v.mu)
+    x <- rnorm(length(x))/100 
+    
+    par.uv <- list(getu=1:lu,getv=(lu+1):(lu+lv),getumean=(lu+lv+1):(lu+lv+M),
+                   getvmean=(lu+lv+M+1):length(x),M=M,K=K,R=R,D=D,lambda=lambda)
+    par.uv$w2 <- matrix(0,M,K)
+  }
+  
   cost <- vector()  # For storing the lower bounds
-
+  
   #
   # The main loop
   #
-  for(iter in 1:opts$iter.max){ 
+  for(iter in 1:opts$iter.max) {
     
+    # Check if some components need to be removed
+    keep <- which(colMeans(Z^2) > 1e-7)
+    if(length(keep)!=K && opts$dropK) {
+      K <- length(keep)
+      id <- rep(1,K)
+      Z <- Z[,keep]
+      covZ <- covZ[keep,keep]
+      ZZ <- ZZ[keep,keep]
+      for(m in 1:M) {
+        W[[m]] <- W[[m]][,keep,drop=FALSE]
+        if(!opts$low.mem)
+          covW[[m]] <- covW[[m]][keep,keep]
+        WW[[m]] <- WW[[m]][keep,keep]
+      }
+      
+      alpha <- alpha[,keep]
+      logalpha <- logalpha[,keep]
+      
+      if(R!="full") {
+        V <- V[keep,]
+        v.mu <- v.mu[keep]
+        x <- c(as.vector(U),as.vector(V),u.mu,v.mu)
+        lv <- length(V)
+        par.uv$K <- K
+        par.uv$getv<- (lu+1):(lu+lv)
+        par.uv$getumean <- (lu+lv+1):(lu+lv+M)
+        par.uv$getvmean <- (lu+lv+M+1):length(x)
+        par.uv$w2 <- matrix(0,M,K)
+      } else {
+        b_ard <- matrix(1,M,K) # The parameters of the Gamma distribution
+      }
+      if(opts$rotate) {
+        par$K <- K
+      }
+    }
     #
     # Update the projections
     #
-    for(m in 1:M){
+    lb.qw <- rep(NA,M) # Computes also the determinant of covW needed for the
+                       # lower bound
+    for(m in 1:M) {
       # Efficient and robust way of computing
       # solve(diag(alpha) + tau * ZZ^T)
       tmp <- 1/sqrt(alpha[m,])
-      covW[[m]] <- 1/tau[m] * outer(tmp,tmp) *
-        chol2inv(chol(outer(tmp,tmp)*ZZ + diag(1/tau[m],K)))
-      
-      # An alternative way; could be tried in case of 
-      #   issues with numerical stability
-      #eS <- eigen( outer( tmp, tmp )*ZZ + diag(1/tau[m],K) , symmetric=TRUE)
-      #covW[[m]] <- 1/tau[m] * outer( tmp, tmp ) * tcrossprod( eS$vectors*outer( id, 1/eS$values), eS$vectors )
-        
-      W[[m]] <- crossprod(Y[[m]],Z)%*%covW[[m]]*tau[m]		
-      WW[[m]] <- crossprod(W[[m]]) + covW[[m]]*D[m]
+
+      cho <- chol(outer(tmp,tmp)*ZZ + diag(1/tau[m],K))
+      det <- -2*sum(log(diag(cho))) - sum(log(alpha[m,])) - K*log(tau[m])
+      lb.qw[m] <- det
+      if(!opts$low.mem) {
+        covW[[m]] <- 1/tau[m] * outer(tmp,tmp) * chol2inv(cho)
+        W[[m]] <- crossprod(Y[[m]],Z)%*%covW[[m]]*tau[m]
+        WW[[m]] <- crossprod(W[[m]]) + covW[[m]]*D[m]
+      } else {
+        covW <- 1/tau[m] * outer(tmp,tmp) * chol2inv(cho)
+        W[[m]] <- crossprod(Y[[m]],Z)%*%covW*tau[m]
+        WW[[m]] <- crossprod(W[[m]]) + covW*D[m]
+      }
     }
     
     # 
     # Update the latent variables
     #
-
+    
     # Efficient and robust way of computing
     # solve(diag(1,K) + tau * WW^t)
     covZ <- diag(1,K)
     for(m in 1:M) {
       covZ <- covZ + tau[m]*WW[[m]]
     }
-    covZ <- chol2inv(chol(covZ))
-    # An alternative way; could be tried in case of 
-    #   issues with numerical stability
-    #eS <- eigen( covZ ,symmetric=TRUE)
-    #covZ <- tcrossprod( eS$vectors*outer(id,1/eS$values), eS$vectors )
-
-    Z <- Y[[1]]%*%W[[1]]*tau[1]
-    for(m in 2:M)
+    cho <- chol(covZ)
+    covZ <- chol2inv(cho)
+    det <- -2*sum(log(diag(cho)))
+    lb.qx <- det
+    
+    Z <- Z*0
+    for(m in 1:M)
       Z <- Z + Y[[m]]%*%W[[m]]*tau[m]
     Z <- Z%*%covZ
     ZZ <- crossprod(Z) + N*covZ
-
+    
     #
     # Optimization of the rotation (only start after the first
     # iteration)
     #
-    if(opts$rotate && iter > 1){
+    if(R=="full" & opts$rotate & iter > 1) {
       # Update the parameter list for the optimizer
-      par[[5]] <- WW
-      par[[6]] <- ZZ
-
+      par$WW <- WW
+      par$ZZ <- ZZ
+      
       # Always start from the identity matrix, i.e. no rotation
       r <- as.vector(diag(K))
       if(opts$opt.method == "BFGS") {
-        r.opt <- try( optim(r,E,gradE,par,method="BFGS",control=list(reltol=opts$opt.bfgs.crit, maxit=opts$opt.iter)), silent=TRUE)
+        r.opt <- try(optim(r,E,gradE,par,method="BFGS",
+                           control=list(reltol=opts$opt.bfgs.crit,
+                                        maxit=opts$opt.iter)), silent=TRUE)
       }
       if(opts$opt.method== "L-BFGS") {
-        r.opt <- try( optim(r,E,gradE,par,method="L-BFGS-B",control=list(maxit=opts$opt.iter,factr=opts$lbfgs.factr)), silent=TRUE)
+        r.opt <- try(optim(r,E,gradE,par,method="L-BFGS-B",
+                           control=list(maxit=opts$opt.iter,
+                                        factr=opts$lbfgs.factr)), silent=TRUE)
       }
-
+      
       # For large K the optimizer occasionally fails due to problems
       # in the svd() routine
       if(inherits(r.opt,"try-error")) {
@@ -246,18 +348,31 @@ GFA <- function(Y,K,opts) {
         opts$rotate <- FALSE
       }else{
         # Update the parameters involved in the rotation: 
-        R <- matrix(r.opt$par,K)
-        eS <- svd(R)
-        R.inv <- tcrossprod( eS$v*outer(id, 1/eS$d), eS$u)
-
-        Z <- tcrossprod(Z,R.inv)
-        covZ <- tcrossprod( R.inv%*%covZ, R.inv)
+        Rot <- matrix(r.opt$par,K)
+        eS <- svd(Rot)
+        det <- sum(log(eS$d))
+        RotInv <- tcrossprod( eS$v*outer(id, 1/eS$d), eS$u)
+        
+        Z <- tcrossprod(Z,RotInv)
+        covZ <- tcrossprod( RotInv%*%covZ, RotInv)
         ZZ <- crossprod(Z) + N*covZ
-
-        for(m in 1:M){
-          W[[m]] <- W[[m]]%*%R
-          covW[[m]] <- crossprod(R,covW[[m]])%*%R
-          WW[[m]] <- crossprod(W[[m]]) + covW[[m]]*D[m]
+        
+        lb.qx <- lb.qx - 2*det
+        
+        for(m in 1:M) {
+          if(!opts$low.mem) {
+            W[[m]] <- W[[m]]%*%Rot
+            covW[[m]] <- crossprod(Rot,covW[[m]])%*%Rot
+            WW[[m]] <- crossprod(W[[m]]) + covW[[m]]*D[m]
+          } else {
+            #covW[[m]] is not stored, so it needs to be computed before rotation
+            covW <- (WW[[m]] - crossprod(W[[m]]))/D[m]
+            W[[m]] <- W[[m]]%*%Rot
+            covW <- crossprod(Rot,covW)%*%Rot
+            WW[[m]] <- crossprod(W[[m]]) + covW*D[m]
+          }
+          
+          lb.qw[m] <- lb.qw[m] + 2*det
         }
       }
     }
@@ -265,10 +380,33 @@ GFA <- function(Y,K,opts) {
     #
     # Update alpha, the ARD parameters
     #
-    for(m in 1:M){
-      tmp <- beta_0 + diag(WW[[m]])/2
-      alpha[m,] <- a_ard[m]/tmp
-      b_ard[m,] <- tmp
+    if(R == "full"){
+      for(m in 1:M){
+        tmp <- beta_0 + diag(WW[[m]])/2
+        alpha[m,] <- a_ard[m]/tmp
+        b_ard[m,] <- tmp
+      }
+    }else{
+      for(m in 1:M)
+        par.uv$w2[m,] <- diag(WW[[m]])
+
+      res <- try(optim(x,fn=Euv,gr=gradEuv,par.uv,method="L-BFGS-B",
+                            lower=c(rep(-sqrt(500/R),M*R+K*R),rep(-50,M+K)),
+                            upper=c(rep(sqrt(500/R),M*R+K*R), rep(50,M+K)),  
+                            control=list(fnscale=-1,maxit=opts$opt.iter,
+                                         factr=opts$lbfgs.factr)),silent=TRUE)
+      if(inherits(res,"try-error")){
+        cost[iter] <- NA
+        stop("Problems in optimization. Try a new initialization.")
+        # terminate the algorithm (next model to learn) 
+      }
+      x <- res$par
+      U <- matrix(res$par[par.uv$getu],par.uv$M,par.uv$R)
+      V <- matrix(res$par[par.uv$getv],par.uv$K,par.uv$R)
+      u.mu <- res$par[par.uv$getumean]
+      v.mu <- res$par[par.uv$getvmean]
+      alpha <- exp(tcrossprod(U,V) + outer(u.mu,rep(1,K)) +outer(rep(1,M),v.mu))
+      
     }
     
     #
@@ -276,74 +414,92 @@ GFA <- function(Y,K,opts) {
     #
     for(m in 1:M) {
       b_tau[m] <- beta_0t + ( Yconst[m] + sum(WW[[m]]*ZZ)
-                             - 2*sum(Z*(Y[[m]]%*%W[[m]])))/2
+                              - 2*sum(Z*(Y[[m]]%*%W[[m]])))/2
     }
     tau <- a_tau/b_tau
-
+    
     #
     # Calculate the lower bound.
     # Consists of calculating the likelihood term and 
     # KL-divergences between the factorization and the priors
     #
-
+    
     # The likelihood
-    logtau <- digamma(a_tau) - log(b_tau)
-    for(m in 1:M) {
-      logalpha[m,] <- digamma(a_ard[m]) - log(b_ard[m,])
+    logtau <- digammaa_tau - log(b_tau)
+    if(R == "full") {
+      for(m in 1:M) {
+        logalpha[m,] <- digammaa_ard[m] - log(b_ard[m,])
+      }
+    } else {
+      logalpha <- log(alpha)
     }
-    lb.p <- const + sum(N*D/2*logtau) - sum( (b_tau - beta_0t)*tau )
+    
+    lb.p <- const + N*crossprod(D,logtau)/2 - crossprod(b_tau - beta_0t,tau)
     lb <- lb.p
-
+    
     # E[ ln p(Z)] - E[ ln q(Z) ]
     lb.px <- - sum(diag(ZZ))/2
-    
-    lb.qx <- - N*sum(log(svd(covZ,nu=0,nv=0)$d))/2 - N*K/2 
+    lb.qx <- - N*lb.qx/2 - N*K/2 
     lb <- lb + lb.px - lb.qx
-
+    
     # E[ ln p(W)] - E[ ln q(W)]
-    lb.pw <- D[1]/2*sum(logalpha[1,]) -  sum(diag(WW[[1]])*alpha[1,])/2
-    for(m in 2:M) {
-      lb.pw <- lb.pw +
-        D[m]/2*sum(logalpha[m,]) -  sum(diag(WW[[m]])*alpha[m,])/2
+    if(R == "full") {
+      lb.pw <- 0
+      for(m in 1:M) {
+        lb.pw <- lb.pw +
+          D[m]/2*sum(logalpha[m,]) -  sum(diag(WW[[m]])*alpha[m,])/2
+      }
+    } else {
+      lb.pw <- res$value
     }
-    lb.qw <- -D[1]*sum(log(svd(covW[[1]],nu=0,nv=0)$d))/2 -D[1]*K/2
-    for(m in 2:M) {
-      lb.qw <- lb.qw - D[m]*sum(log(svd(covW[[m]],nu=0,nv=0)$d))/2 -D[m]*K/2
-    }
-    lb <- lb + lb.pw - lb.qw
-
+    for(m in 1:M)
+      lb.qw[m] <- - D[m]*lb.qw[m]/2 -D[m]*K/2
+    lb <- lb + lb.pw - sum(lb.qw)
+    
     # E[ln p(alpha)] - E[ln q(alpha)]
-    lb.pa <- M*K*( -lgamma(alpha_0) + alpha_0*log(beta_0) ) + (alpha_0-1)*sum(logalpha) - beta_0*sum(alpha)
-    lb.qa <- -K*sum(lgamma(a_ard)) + sum(a_ard*rowSums( log(b_ard) )) + sum((a_ard-1)*rowSums(logalpha)) - sum(b_ard*alpha)
-    lb <- lb + lb.pa - lb.qa
-
+    if(R == "full") {
+      lb.pa <- M*K*( -lgamma(alpha_0) + alpha_0*log(beta_0) ) +
+        (alpha_0-1)*sum(logalpha) - beta_0*sum(alpha)
+      lb.qa <- -K*sum(lgamma(a_ard)) + sum(a_ard*rowSums( log(b_ard) )) +
+        sum((a_ard-1)*rowSums(logalpha)) - sum(b_ard*alpha)
+      lb <- lb + lb.pa - lb.qa
+    }
+    
     # E[ln p(tau)] - E[ln q(tau)]
-    lb.pt <- -M*lgamma(alpha_0t) + M*alpha_0t*log(beta_0t) + sum((alpha_0t-1)*logtau) - sum(beta_0t*tau)
-    lb.qt <- -sum(lgamma(a_tau)) + sum(a_tau*log(b_tau)) + sum((a_tau-1)*logtau) - sum(b_tau*tau)
+    lb.pt <- lb.pt.const + sum((alpha_0t-1)*logtau) - sum(beta_0t*tau)
+    lb.qt <- lgammaa_tau + crossprod(a_tau,log(b_tau)) +
+      crossprod((a_tau-1),logtau) - crossprod(b_tau,tau)
     lb <- lb + lb.pt - lb.qt
-
+    
     # Store the cost function
     cost[iter] <- lb
-
+    
     if(opts$verbose==2) {
-      print(paste("Iteration:",iter,"/ cost:",lb))
+      print(paste("Iteration:",iter,"/ cost:",lb,"/ K",K))
     }
     # Convergence if the relative change in cost is small enough
     if(iter>1){
       diff <- cost[iter]-cost[iter-1]
-      if( abs(diff)/abs(cost[iter]) < opts$iter.crit | iter == opts$iter.max ){ 
+      if(abs(diff)/abs(cost[iter]) < opts$iter.crit | iter == opts$iter.max) {
         break
       }
     }
   } # the main loop of the algorithm ends
-
+  
   # Add a tiny amount of noise on top of the latent variables,
   # to supress possible artificial structure in components that
   # have effectively been turned off
   Z <- Z + opts$addednoise*matrix(rnorm(N*K,0,1),N,K) %*% chol(covZ)
-
+  
   # return the output of the model as a list
-  list(W=W,covW=covW,ZZ=ZZ,WW=WW,Z=Z,covZ=covZ,tau=tau,alpha=alpha,cost=cost,D=D,K=K,addednoise=opts$addednoise,datavar=datavar)
+  if(R=="full") {
+    list(W=W,covW=covW,ZZ=ZZ,WW=WW,Z=Z,covZ=covZ,tau=tau,alpha=alpha,cost=cost,
+         D=D,K=K,addednoise=opts$addednoise,datavar=datavar,iter=iter,R=R)
+  } else {
+    list(W=W,covW=covW,ZZ=ZZ,WW=WW,Z=Z,covZ=covZ,tau=tau,alpha=alpha,cost=cost,
+         D=D,K=K,addednoise=opts$addednoise,datavar=datavar,iter=iter,R=R,
+         U=U,V=V,u.mu=u.mu,v.mu=v.mu)
+  }
 }
 
 E <- function(r,par) {
@@ -353,7 +509,7 @@ E <- function(r,par) {
   #
   R <- matrix(r,par$K)
   eS <- svd(R)
-
+  
   val <- -sum(par$ZZ*(tcrossprod(eS$u*outer(rep(1,par$K),1/eS$d^2))),eS$u)/2
   val <- val + (par$Ds-par$N)*sum(log(eS$d))
   for(m in 1:par$M) {
@@ -369,8 +525,9 @@ gradE <- function(r,par) {
   R <- matrix(r,par$K)
   eS <- svd(R)
   Rinv <- tcrossprod(eS$v*outer(rep(1,par$K),1/eS$d), eS$u)
-  gr <- as.vector( tcrossprod( tcrossprod( eS$u*outer(rep(1,par$K),1/eS$d^2) , eS$u )%*%par$ZZ + diag(par$Ds - par$N,par$K), Rinv) )
-
+  gr <- as.vector(tcrossprod(tcrossprod(eS$u*outer(rep(1,par$K),1/eS$d^2),eS$u)%*%
+                               par$ZZ + diag(par$Ds - par$N,par$K), Rinv) )
+  
   tmp1 <- par$WW[[1]]%*%R
   tmp2 <- 1/colSums(R*tmp1)
   tmp1 <- par$D[1]*as.vector( tmp1*outer(rep(1,par$K),tmp2) )
@@ -384,6 +541,46 @@ gradE <- function(r,par) {
   return(-gr)
 }
 
+Euv <- function(x,par){
+  #
+  # Evaluates the cost function value wrt the low-rank
+  # factorization of alpha used in the generic optimization routine
+  #
+  U <- matrix(x[par$getu],par$M,par$R)
+  V <- matrix(x[par$getv],par$K,par$R)
+  u.mu <- x[par$getumean]
+  v.mu <- x[par$getvmean]
+  logalpha <- tcrossprod(U,V) + outer(u.mu,rep(1,par$K)) + outer(rep(1,par$M),v.mu)
+  
+  E <- sum(crossprod(par$D,logalpha))-sum(par$w2*exp(logalpha))
+  if(par$lambda!=0)
+    E <- E - par$lambda*(sum(V^2) + sum(U^2))
+  return(E/2)
+}
+
+gradEuv <- function(x,par){
+  #
+  # Evaluates the gradient of the cost function Euv()
+  #
+  U <- matrix(x[par$getu],par$M,par$R)
+  V <- matrix(x[par$getv],par$K,par$R)
+  u.mu <- x[par$getumean]
+  v.mu <- x[par$getvmean]
+  alphaiAlphaw2 <- outer(par$D,rep(1,par$K)) - 
+    exp(tcrossprod(U,V) + outer(u.mu,rep(1,par$K)) + outer(rep(1,par$M),v.mu))*par$w2
+  
+  gradU <- alphaiAlphaw2%*%V
+  gradV <- crossprod(alphaiAlphaw2,U)
+  if(par$lambda!=0) {
+    gradU <- gradU - par$lambda*2*U
+    gradV <- gradV - par$lambda*2*V
+  }
+  grad.umean <- rowSums(alphaiAlphaw2)
+  grad.vmean <- colSums(alphaiAlphaw2)
+  grad <- c(as.vector(gradU),as.vector(gradV),grad.umean,grad.vmean)
+  return(grad/2)
+}
+
 getDefaultOpts <- function(){
   #
   # A function for generating a default set of parameters.
@@ -394,6 +591,18 @@ getDefaultOpts <- function(){
   #   model <- GFA(Y,K,opts)
   
   #
+  # Rank of GFA's hierarhical low-rank ARD prior. Possible values are "full" 
+  # and all integers, including zero.
+  #
+  R <- "full"
+
+  #
+  # Prior precision of zero-mean Gaussian prior for U and V of
+  # the low-rank ARD prior.
+  #
+  lambda <- 0.1
+  
+  #
   # Whether to use the rotation explained in the ICML'11 paper.
   # Using the rotation is recommended, but for some data sets
   # equally good solutions can be obtained without rotation and
@@ -401,7 +610,7 @@ getDefaultOpts <- function(){
   #  - TRUE|FALSE
   #
   rotate <- TRUE
-
+  
   #
   # Parameters for controlling how the rotation is solved
   #  - opt.method chooses the optimization method and
@@ -417,9 +626,9 @@ getDefaultOpts <- function(){
   #
   opt.method <- "L-BFGS"
   opt.iter <- 10^5
-  lbfgs.factr <- 10^3
+  lbfgs.factr <- 10^10
   bfgs.crit <- 10^-5
-
+  
   #
   # Initial value for the noise precisions. Should be large enough
   # so that the real structure is modeled with components
@@ -428,7 +637,7 @@ getDefaultOpts <- function(){
   #          above 1
   #
   init.tau <- 10^3
-
+  
   #
   # Parameters for controlling when the algorithm stops.
   # It stops when the relative difference in the lower bound
@@ -436,7 +645,7 @@ getDefaultOpts <- function(){
   #
   iter.crit <- 10^-6
   iter.max <- 10^5
-
+  
   #
   # Additive noise level for latent variables. The latent variables
   # of inactive components (those with very large alpha) occasionally
@@ -455,7 +664,13 @@ getDefaultOpts <- function(){
   #
   prior.alpha_0 <- prior.beta_0 <- 1e-14
   prior.alpha_0t <- prior.beta_0t <- 1e-14
-
+  
+  # Two performace enhancing settings
+  #   dropK=TRUE  : matrix dimensions are reduced when components are shut off
+  #   low.mem=TRUE: list covW is not stored
+  dropK <- TRUE
+  low.mem <- FALSE
+  
   #
   # Verbosity level
   #  0: Nothing
@@ -463,12 +678,13 @@ getDefaultOpts <- function(){
   #  2: Cost function values for each iteration
   #
   verbose <- 2
- 
-  return(list(rotate=rotate, init.tau=init.tau, iter.crit=iter.crit,
+  
+  return(list(R=R,rotate=rotate, init.tau=init.tau, iter.crit=iter.crit,
               iter.max=iter.max, opt.method=opt.method,
               lbfgs.factr=lbfgs.factr, bfgs.crit=bfgs.crit, opt.iter=opt.iter,
-              addednoise=1e-6,
+              addednoise=addednoise,
               prior.alpha_0=prior.alpha_0,prior.beta_0=prior.beta_0,
               prior.alpha_0t=prior.alpha_0t,prior.beta_0t=prior.beta_0t,
-              verbose=verbose))
+              verbose=verbose,lambda=lambda,dropK=dropK,low.mem=low.mem))
+  
 }
