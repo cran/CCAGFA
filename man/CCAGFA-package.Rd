@@ -38,10 +38,10 @@ Virtanen, S. and Klami, A., and Khan, S.A. and Kaski, S.: Baysian
 group factor analysis. In \emph{Proceedings of the 15th International
   Conference on Artificial Intelligence and Statistics (AISTATS)}, volume 22 of JMLR W&CP, pages 1269-1277, 2012.
 
-Klami, A. and Virtanen, S., and Kaski, S.:Bayesian Canonical Correlation
+Klami, A. and Virtanen, S., and Kaski, S.: Bayesian Canonical Correlation
 Analysis. \emph{Journal of Machine Learning Research},14:965-1003, 2013.
 
-Klami, A. and Virtanen, S., Leppaaho, E., and Kaski, S.:Group Factor Analysis. \emph{Submitted to a journal}, 2014.
+Klami, A. and Virtanen, S., Leppaaho, E., and Kaski, S.: Group Factor Analysis. \emph{IEEE Transactions on Neural Networks and Learning Systems}, to appear.
 }
 \keyword{package}
 %\seealso{%%~~ \code{\link[somepkg:somepkg-package]{somepkg}} ~~}}

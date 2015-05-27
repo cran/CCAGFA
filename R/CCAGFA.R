@@ -243,22 +243,24 @@ GFA <- function(Y,K,opts) {
     keep <- which(colMeans(Z^2) > 1e-7)
     if(length(keep)!=K && opts$dropK) {
       K <- length(keep)
+      if(K==0)
+        stop("Shut down all components, no structure found in the data.")
       id <- rep(1,K)
-      Z <- Z[,keep]
-      covZ <- covZ[keep,keep]
-      ZZ <- ZZ[keep,keep]
+      Z <- Z[,keep,drop=F]
+      covZ <- covZ[keep,keep,drop=F]
+      ZZ <- ZZ[keep,keep,drop=F]
       for(m in 1:M) {
         W[[m]] <- W[[m]][,keep,drop=FALSE]
         if(!opts$low.mem)
-          covW[[m]] <- covW[[m]][keep,keep]
-        WW[[m]] <- WW[[m]][keep,keep]
+          covW[[m]] <- covW[[m]][keep,keep,drop=F]
+        WW[[m]] <- WW[[m]][keep,keep,drop=F]
       }
       
-      alpha <- alpha[,keep]
-      logalpha <- logalpha[,keep]
+      alpha <- alpha[,keep,drop=F]
+      logalpha <- logalpha[,keep,drop=F]
       
       if(R!="full") {
-        V <- V[keep,]
+        V <- V[keep,,drop=F]
         v.mu <- v.mu[keep]
         x <- c(as.vector(U),as.vector(V),u.mu,v.mu)
         lv <- length(V)
@@ -669,7 +671,7 @@ getDefaultOpts <- function(){
   #   dropK=TRUE  : matrix dimensions are reduced when components are shut off
   #   low.mem=TRUE: list covW is not stored
   dropK <- TRUE
-  low.mem <- FALSE
+  low.mem <- TRUE
   
   #
   # Verbosity level

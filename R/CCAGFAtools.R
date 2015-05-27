@@ -56,17 +56,17 @@ GFAtrim <- function(model,threshold=1e-3) {
   }
 
   keep <- which(colSums(active)>0)
-  model$Z <- model$Z[,keep]
-  model$covZ <- model$covZ[keep,keep]
+  model$Z <- model$Z[,keep,drop=F]
+  model$covZ <- model$covZ[keep,keep,drop=F]
 
   for(m in 1:M) {
-    model$W[[m]] <- model$W[[m]][,keep]
-    model$covW[[m]] <- model$covW[[m]][keep,keep]
-    model$WW[[m]] <- model$WW[[m]][keep,keep]
+    model$W[[m]] <- model$W[[m]][,keep,drop=F]
+    model$covW[[m]] <- model$covW[[m]][keep,keep,drop=F]
+    model$WW[[m]] <- model$WW[[m]][keep,keep,drop=F]
   }
-  model$alpha <- model$alpha[,keep]
+  model$alpha <- model$alpha[,keep,drop=F]
 
-  active <- active[,keep]
+  active <- active[,keep,drop=F]
   model$K <- length(keep)
 
   model$ZZ <- crossprod(model$Z) + N*model$covZ
