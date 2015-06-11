@@ -1,3 +1,7 @@
+Changes in CCAGFA version 1.0.6
+
+  o Corrected the functioning of GFApred() and GFAtrim() for models with option low.mem=TRUE.
+
 Changes in CCAGFA version 1.0.5
 
   o Handling of runs where component amount K is pruned to 1 or 0

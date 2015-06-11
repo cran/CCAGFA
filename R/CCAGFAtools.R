@@ -58,6 +58,12 @@ GFAtrim <- function(model,threshold=1e-3) {
   keep <- which(colSums(active)>0)
   model$Z <- model$Z[,keep,drop=F]
   model$covZ <- model$covZ[keep,keep,drop=F]
+  
+  if(!is.null(dim(model$covW))) { #covW list not stored due to low.mem=TRUE
+    model$covW <- list()
+    for(m in 1:M)
+      model$covW[[m]] <- (model$WW[[m]] - crossprod(model$W[[m]]))/model$D[m]
+  }
 
   for(m in 1:M) {
     model$W[[m]] <- model$W[[m]][,keep,drop=F]
@@ -199,6 +205,12 @@ GFApred <- function(pred,Y,model,sample=FALSE,nSample=100) {
 
   N <- nrow(Y[[tr[1]]])
   M <- length(model$D)
+  
+  if(!is.null(dim(model$covW))) { #covW list not stored due to low.mem=TRUE
+    model$covW <- list()
+    for(m in 1:M)
+      model$covW[[m]] <- (model$WW[[m]] - crossprod(model$W[[m]]))/model$D[m]
+  }
   
   # Estimate the covariance of the latent variables
   covZ <- diag(1,model$K)

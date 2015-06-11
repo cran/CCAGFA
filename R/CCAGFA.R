@@ -669,9 +669,9 @@ getDefaultOpts <- function(){
   
   # Two performace enhancing settings
   #   dropK=TRUE  : matrix dimensions are reduced when components are shut off
-  #   low.mem=TRUE: list covW is not stored
+  #   low.mem=TRUE: list covW is not stored (may cause minor numerical differences)
   dropK <- TRUE
-  low.mem <- TRUE
+  low.mem <- FALSE
   
   #
   # Verbosity level
