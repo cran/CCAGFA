@@ -29,3 +29,19 @@ citEntry(entry="InProceedings",
 		"Proceedings of the Fifteenth International Conference on Artificial Intelligence and Statistics (AISTATS), volume 22 of JMLR W&CP, pages 1269-1277, 2012.",
 		"http://research.ics.aalto.fi/mi/online-papers/virtanen12.pdf")
 )
+
+citEntry(entry="Article",
+	author=personList(as.person("Arto Klami"), as.person("Seppo Virtanen"),
+			as.person("Eemeli Lepp\"{a}aho"), as.person("Samuel Kaski")),
+  title="Group Factor Analysis",
+  journal="IEEE Transactions on Neural Networks and Learning Systems",
+  volume="26",
+  number="9",
+  pages="2136--2147",
+  year="2015",
+  url="http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=6985615",
+	header="or:",
+	textVersion=paste("Arto Klami, Seppo Virtanen, Eemeli Leppaaho and Samuel Kaski.",
+		"Group Factor Analysis.",
+		"IEEE Transactions on Neural Networks and Learning Systems, 26(9):2136-2147,2015.")
+)

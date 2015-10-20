@@ -1,3 +1,7 @@
+Changes in CCAGFA version 1.0.7
+
+  o Updated citation information
+
 Changes in CCAGFA version 1.0.6
 
   o Corrected the functioning of GFApred() and GFAtrim() for models with option low.mem=TRUE.
