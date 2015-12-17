@@ -512,7 +512,7 @@ E <- function(r,par) {
   R <- matrix(r,par$K)
   eS <- svd(R)
   
-  val <- -sum(par$ZZ*(tcrossprod(eS$u*outer(rep(1,par$K),1/eS$d^2))),eS$u)/2
+  val <- -sum(par$ZZ*tcrossprod(eS$u*outer(rep(1,par$K),1/eS$d)))/2
   val <- val + (par$Ds-par$N)*sum(log(eS$d))
   for(m in 1:par$M) {
     val <- val - par$D[m]*sum( log( colSums(R*(par$WW[[m]]%*%R)) ))/2

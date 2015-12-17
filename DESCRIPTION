@@ -2,7 +2,7 @@ Package: CCAGFA
 Type: Package
 Title: Bayesian Canonical Correlation Analysis and Group Factor
         Analysis
-Version: 1.0.7
+Version: 1.0.8
 Date: 2015-10-20
 Authors@R: c(person("Seppo", "Virtanen", role = c("aut", "cre"),
 		     email = "s.virtanen@warwick.ac.uk"),
@@ -17,7 +17,7 @@ Maintainer: Seppo Virtanen <s.virtanen@warwick.ac.uk>
 Description: Variational Bayesian algorithms for learning canonical correlation analysis (CCA), inter-battery factor analysis (IBFA), and group factor analysis (GFA). Inference with several random initializations can be run with the functions CCAexperiment() and GFAexperiment().
 License: GPL (>= 2)
 URL: http://research.ics.aalto.fi/mi/
-Packaged: 2015-10-20 09:23:38 UTC; eleppaah
+Packaged: 2015-12-17 11:32:38 UTC; eleppaah
 NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2015-10-20 12:05:45
+Date/Publication: 2015-12-17 16:08:55
